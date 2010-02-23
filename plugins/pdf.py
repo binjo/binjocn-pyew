@@ -230,7 +230,7 @@ def pdfInfo(pyew, doprint=True):
        f.close()
     else:
         filename = pyew.filename
-    
+
     print PDFiD2String(PDFiD(filename, False, True, False, False), False)
 
 def pdfStreams(pyew, doprint=True, get_buf=False):
@@ -246,9 +246,9 @@ def pdfStreams(pyew, doprint=True, get_buf=False):
     for token in tokens:
         if token == '':
             continue
-        
+
         token = unescape(token)
-        
+
         if token == "Filter":
             bfilters = True
         elif token == "stream":
@@ -284,9 +284,16 @@ def pdfViewStreams(pyew, doprint=True, stream_id=-1, gui=False):
         streams += 1
         pos2 = buf.find("endstream")
         # -8 means -len("stream")
-        tmp = buf[pos+8:pos2-1]
+        tmp = buf[pos+6:pos2-1]
+
+        # FIXME found some samples start with a SPACE, does it possible with multi spaces?
+        if tmp[0] == ' ': tmp = tmp[1:]
+        # twice check, it can be '\x0D\x0A' or '\x0D' or '\x0A' follow the 'stream'
+        if tmp[0] == '\r' or tmp[0] == '\n': tmp = tmp[1:]
+        if tmp[0] == '\r' or tmp[0] == '\n': tmp = tmp[1:]
+
         failed = False
-        
+
         if stream_id == -1 or streams == stream_id:
             if streams_filters.has_key(streams):
                 for filter in streams_filters[streams]:
@@ -305,11 +312,11 @@ def pdfViewStreams(pyew, doprint=True, stream_id=-1, gui=False):
                     except:
                         failed = True
                         print "Error applying filter %s" % filter, sys.exc_info()[1]
-                
+
                 print "Encoded Stream %d" % streams
             else:
                 print "Stream %d" % streams
-            
+
             if not gui:
                 print "-"*80
                 if tmp.find("\x00") == -1:
@@ -322,21 +329,21 @@ def pdfViewStreams(pyew, doprint=True, stream_id=-1, gui=False):
                     textbox("Stream %d" % streams, "Stream", tmp)
                 else:
                     codebox("Stream %d" % streams, "Stream", pyew.hexdump(tmp, pyew.hexcolumns))
-            
+
             if tmp.find("\x00") > -1 and not failed and not gui:
                 res = raw_input("Show disassembly (y/n)? [n]: ")
                 if res == "y":
                     print pyew.disassemble(tmp)
-        
+
         buf = buf[pos2+11:]
         if buf.find("stream") == -1:
             break
-        
+
         if stream_id == -1:
             try:
                 if not gui:
                     res = raw_input("Continue? ")
-                    
+
                     if res in ["q", "n"]:
                         break
                 else:
